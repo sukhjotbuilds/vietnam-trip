@@ -183,6 +183,45 @@ details.settings p { margin: 0; color: var(--muted); font-size: 14px; }
 details.settings form { background: none; border: 0; padding: 0; }
 button.secondary { font: 600 15px var(--font-body); background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 16px; cursor: pointer; }
 button.secondary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* Day notes */
+.notes { display: flex; flex-direction: column; gap: 6px; }
+.notes-label { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.notes textarea {
+  font: 15px/1.5 var(--font-body); color: var(--ink); background: var(--gold-soft); border: 1px solid transparent;
+  border-radius: 10px; padding: 8px 12px; width: 100%; resize: none; overflow: hidden; display: block;
+}
+
+/* Items without a time column: one entry per item; "pick one" options sit together without a rule between them */
+.entry { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-block: 14px; }
+.entry.cont { border-top: 0; padding-top: 0; }
+.list .entry:last-child { border-bottom: 1px solid var(--line); }
+.entry .or { margin: 0; }
+button.name { background: none; border: 0; padding: 0; margin: 0; text-align: left; color: var(--ink); cursor: pointer; font-family: inherit; line-height: 1.4; }
+button.name:hover { text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+button.name:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+.inote { font-size: 14px; color: var(--ink); border-left: 3px solid var(--jade); padding: 1px 0 1px 8px; overflow-wrap: anywhere; }
+.editbar { flex-direction: column; align-items: stretch; }
+.editbar input { width: 100%; font: 15px var(--font-body); }
+.editbtns { display: flex; flex-wrap: wrap; gap: 8px; }
+.notes textarea::placeholder { color: var(--muted); }
+.notes textarea:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+
+/* Row editing: time, earlier/later, remove */
+.edit-btn { background: none; border: 0; padding: 0; font: inherit; font-size: 13px; color: var(--muted); cursor: pointer; }
+.edit-btn:hover, .edit-btn[aria-expanded="true"] { color: var(--ink); }
+.edit-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+.editbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; padding: 8px; border-radius: 8px; background: var(--jade-soft); }
+.editbar label { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.editbar input { font: 500 14px var(--font-data); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; width: 7.5em; }
+.editbar input:focus-visible { outline: 2px solid var(--jade); outline-offset: 1px; }
+.editbar button { font: 600 13px var(--font-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.editbar button:disabled { opacity: .4; cursor: default; }
+.editbar button.del { color: var(--danger); }
+.editbar button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.removed { padding-top: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: var(--muted); }
+.removed ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.removed li { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; }
+.removed li span { text-decoration: line-through; }
 code { font-family: var(--font-data); font-size: 12.5px; background: var(--jade-soft); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
 </style>
 </head>
@@ -204,7 +243,15 @@ code { font-family: var(--font-data); font-size: 12.5px; background: var(--jade-
       <div class="sync" id="sync"><span class="dot"></span><span id="syncText">Saved on this phone</span><button type="button" class="linkbtn" id="syncNow" hidden>Sync now</button></div>
     </header>
 
-    <div class="list" id="list"></div>
+    <label class="notes" for="dayNotes">
+      <span class="notes-label">Plan for the day</span>
+      <textarea id="dayNotes" rows="1" placeholder="Add a note for the day…"></textarea>
+    </label>
+
+    <div>
+      <div class="list" id="list"></div>
+      <div class="removed" id="removed"></div>
+    </div>
 
     <section>
       <h2>Places we added</h2>
@@ -276,7 +323,7 @@ code { font-family: var(--font-data); font-size: 12.5px; background: var(--jade-
       </div>
     </details>
 
-    <footer>Costs in VND, with USD in brackets. “Find on Maps” searches Google Maps for the place. Use “Move to…” on any item to switch it to another day.</footer>
+    <footer>Costs in VND, with USD in brackets. “Find on Maps” searches Google Maps for the place. Use “Move to…” to switch an item to another day, Tap an item’s name to add a note, move it earlier or later, or delete it.</footer>
   </div>
 </main>
 
@@ -296,16 +343,18 @@ const LS_GH = "vn-trip-gh";
 const LS_TAB = "vn-trip-tab";
 const LS_LAST = "vn-trip-last-sync";
 
-// store.items[id] = {done, day, at}; store.extras[id] = {day, name, url, kind, note, done, createdAt, at, deleted?}
-// `at` is the time of the last change, used to merge this phone's changes with GitHub's copy.
-let store = { items: {}, extras: {} };
-let synced = { items: {}, extras: {} };
+// store.items[id] = {done, day, time?, rank?, deleted?, at}; store.extras[id] = {day, name, url, kind, note, done, createdAt, at, deleted?};
+// store.notes[dayId] = {text, at}. `at` is the time of the last change, used to merge this phone's changes with GitHub's copy.
+// `rank` is set once someone reorders a day by hand; the day then sorts by rank instead of by time.
+const SECTIONS = ["items", "extras", "notes"];
+let store = { items: {}, extras: {}, notes: {} };
+let synced = { items: {}, extras: {}, notes: {} };
 let cfg = Object.assign({}, GH_DEFAULTS, { token: "" });
 let current = DAYS[0].id;
 
 function readJSON(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key) || "null"); return v || fallback; } catch (e) { return fallback; } }
 function writeJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); return true; } catch (e) { return false; } }
-function normalise(s) { return { items: (s && s.items) || {}, extras: (s && s.extras) || {} }; }
+function normalise(s) { return { items: (s && s.items) || {}, extras: (s && s.extras) || {}, notes: (s && s.notes) || {} }; }
 
 function loadLocal() {
   store = normalise(readJSON(LS_STORE, null));
@@ -334,9 +383,21 @@ function timeKey(t) {
   return 24 * 60 + 1;
 }
 
-const isDone = it => !!(store.items[it.id] && store.items[it.id].done);
-const effDay = it => (store.items[it.id] && store.items[it.id].day) || it.day;
-const itemsFor = day => ITEMS.filter(it => effDay(it) === day);
+const over = it => store.items[it.id] || {};
+const isDone = it => !!over(it).done;
+const effDay = it => over(it).day || it.day;
+const effTime = it => (typeof over(it).time === "string" ? over(it).time : it.time);
+const isRemoved = it => !!over(it).deleted;
+const itemsFor = day => ITEMS.filter(it => effDay(it) === day && !isRemoved(it));
+const removedFor = day => ITEMS.filter(it => effDay(it) === day && isRemoved(it));
+const hasRank = it => typeof over(it).rank === "number";
+// A day sorts by time until someone reorders it by hand; after that every item in it carries a rank.
+function dayOrder(day) {
+  const its = itemsFor(day);
+  const ranked = its.some(hasRank);
+  const key = it => ranked && hasRank(it) ? over(it).rank : timeKey(effTime(it)) * 1000;
+  return its.slice().sort((a, b) => key(a) - key(b) || DAY_INDEX[a.day] - DAY_INDEX[b.day] || a.id.localeCompare(b.id));
+}
 const extrasFor = day => Object.entries(store.extras)
   .filter(([, x]) => !x.deleted && x.day === day)
   .map(([id, x]) => Object.assign({ id }, x))
@@ -362,13 +423,19 @@ function moveSelect(id, day, onMove) {
   return wrap;
 }
 
-function renderItem(it) {
+function renderItem(it, pos, total) {
   const done = isDone(it);
+  const open = editing.has(it.id);
   const wrap = el("div", "item" + (done ? " done" : ""));
   wrap.append(checkbox(it.id, it.name, done, v => setItem(it, { done: v })));
   const body = el("div", "body");
-  const name = el("label", "name", it.name); name.htmlFor = "cb-" + it.id;
+  // Tapping the name opens the item's note and edit controls; the box on the left ticks it off.
+  const name = el("button", "name", it.name);
+  name.type = "button"; name.setAttribute("aria-expanded", open ? "true" : "false");
+  name.addEventListener("click", () => toggleEdit(it.id));
   body.append(name);
+  const note = over(it).note;
+  if (note) body.append(el("div", "inote", note));
   if (it.desc) body.append(el("div", "desc", it.desc));
   if (it.tip) body.append(el("div", "tip", it.tip));
   const row = el("div", "row");
@@ -377,38 +444,80 @@ function renderItem(it) {
   const c = costText(it.vnd, it.usd); if (c) row.append(el("span", "cost", c));
   if (it.q) { const a = el("a", "", "Find on Maps ↗"); a.href = mapsSearch(it.q); a.target = "_blank"; a.rel = "noopener"; row.append(a); }
   row.append(moveSelect(it.id, effDay(it), to => moveItem(it, to)));
+  const eb = el("button", "edit-btn", open ? "Close" : (note ? "Edit" : "Add note"));
+  eb.type = "button"; eb.setAttribute("aria-expanded", open ? "true" : "false");
+  eb.addEventListener("click", () => toggleEdit(it.id));
+  row.append(eb);
   body.append(row);
+  if (open) body.append(editBar(it, pos, total));
   wrap.append(body);
   return wrap;
 }
 
+const editing = new Set();
+function toggleEdit(id) {
+  editing.has(id) ? editing.delete(id) : editing.add(id);
+  renderList();
+  if (editing.has(id)) { const n = document.getElementById("nt-" + id); if (n && !over(ITEMS.find(i => i.id === id)).note) n.focus(); }
+}
+function editBar(it, pos, total) {
+  const bar = el("div", "editbar");
+  const inp = document.createElement("input");
+  inp.type = "text"; inp.id = "nt-" + it.id; inp.value = over(it).note || ""; inp.placeholder = "Add a note…";
+  inp.maxLength = 200; inp.autocomplete = "off"; inp.setAttribute("aria-label", "Note for " + it.name);
+  inp.addEventListener("change", () => { const v = inp.value.trim(); if (v !== (over(it).note || "")) { setItem(it, { note: v }); renderList(); } });
+  inp.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); inp.blur(); } });
+  const btns = el("div", "editbtns");
+  const up = el("button", "", "↑ Earlier"); up.type = "button"; up.disabled = pos === 0;
+  up.addEventListener("click", () => shiftItem(it, -1));
+  const down = el("button", "", "↓ Later"); down.type = "button"; down.disabled = pos === total - 1;
+  down.addEventListener("click", () => shiftItem(it, 1));
+  const del = el("button", "del", "Delete"); del.type = "button";
+  del.addEventListener("click", () => removeItem(it));
+  btns.append(up, down, del);
+  bar.append(inp, btns);
+  return bar;
+}
+
+let showRemoved = false;
+function renderRemoved() {
+  const box = document.getElementById("removed");
+  box.replaceChildren();
+  const gone = removedFor(current);
+  if (!gone.length) return;
+  const t = el("button", "linkbtn", (showRemoved ? "Hide" : "Show") + " deleted (" + gone.length + ")");
+  t.type = "button"; t.style.alignSelf = "flex-start";
+  t.addEventListener("click", () => { showRemoved = !showRemoved; renderRemoved(); });
+  box.append(t);
+  if (!showRemoved) return;
+  const ul = el("ul");
+  gone.forEach(it => {
+    const li = el("li");
+    const b = el("button", "linkbtn", "Restore"); b.type = "button";
+    b.addEventListener("click", () => restoreItem(it));
+    li.append(el("span", "", it.name), b);
+    ul.append(li);
+  });
+  box.append(ul);
+}
+
+// Options for the same meal stay together under a "pick one" label while they sit next to each other.
+const groupKey = it => it.group ? it.day + "|" + it.time + "|" + it.group : null;
 function renderList() {
   const list = document.getElementById("list");
   list.replaceChildren();
-  const its = itemsFor(current).slice().sort((a, b) =>
-    timeKey(a.time) - timeKey(b.time) || DAY_INDEX[a.day] - DAY_INDEX[b.day] || a.id.localeCompare(b.id));
+  renderRemoved();
+  const its = dayOrder(current);
   if (!its.length) { list.append(el("div", "empty", "No planned items on this day. Move one here, or add a place below.")); return; }
-  const slots = [];
-  its.forEach(it => {
-    const last = slots[slots.length - 1];
-    if (last && last.time === it.time) last.items.push(it); else slots.push({ time: it.time, items: [it] });
-  });
-  slots.forEach(s => {
-    const slot = el("div", "slot");
-    slot.append(el("div", "time", s.time || "Any time"));
-    const items = el("div", "items");
-    const groups = {};
-    s.items.forEach(it => { if (it.group) groups[it.group] = (groups[it.group] || 0) + 1; });
-    const seen = {};
-    s.items.forEach(it => {
-      if (it.group && groups[it.group] > 1) {
-        items.append(el("div", "or", seen[it.group] ? "or" : it.group + " · pick one"));
-        seen[it.group] = true;
-      }
-      items.append(renderItem(it));
-    });
-    slot.append(items);
-    list.append(slot);
+  its.forEach((it, i) => {
+    const k = groupKey(it);
+    const prev = k && i > 0 && groupKey(its[i - 1]) === k;
+    const next = k && i < its.length - 1 && groupKey(its[i + 1]) === k;
+    const cell = el("div", "entry" + (prev ? " cont" : ""));
+    if (prev) cell.append(el("div", "or", "or"));
+    else if (next) cell.append(el("div", "or", it.group + " · pick one"));
+    cell.append(renderItem(it, i, its.length));
+    list.append(cell);
   });
 }
 
@@ -474,8 +583,6 @@ function renderHeader() {
   const meta = document.getElementById("meta");
   meta.replaceChildren();
   const its = itemsFor(current);
-  const first = its.map(i => i.time).filter(t => /^\d/.test(t)).sort((a, b) => timeKey(a) - timeKey(b))[0];
-  if (first) meta.append(el("span", "", "Starts " + first.slice(0, 5)));
   meta.append(el("span", "", its.length + " planned"));
   // Counts one choice per "pick one" group (the first listed) so the estimate is a real day.
   let vnd = 0;
@@ -493,7 +600,32 @@ function renderHeader() {
   document.getElementById("addBtn").textContent = "Add to Day " + dayNum(d.id);
 }
 
-function renderAll() { renderTabs(); renderHeader(); renderList(); renderExtras(); renderStatus(); }
+// Leave the list alone while a time is being typed, so a background sync doesn't throw the edit away.
+function renderAll() {
+  const a = document.activeElement;
+  const typing = a && a.closest && a.closest("#list input");
+  renderTabs(); renderHeader(); renderNotes(); if (!typing) renderList(); renderExtras(); renderStatus();
+}
+
+let notesDay = null;
+function renderNotes() {
+  const ta = document.getElementById("dayNotes");
+  if (notesDay === current && document.activeElement === ta) return;
+  notesDay = current;
+  ta.value = (store.notes[current] && store.notes[current].text) || "";
+  autosize(ta);
+}
+function autosize(ta) { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + 2 + "px"; }
+window.addEventListener("resize", () => autosize(document.getElementById("dayNotes")));
+let notesTimer = null;
+document.getElementById("dayNotes").addEventListener("input", ev => {
+  const ta = ev.target;
+  autosize(ta);
+  store.notes[current] = { text: ta.value, at: Date.now() };
+  clearTimeout(notesTimer);
+  notesTimer = setTimeout(() => { saveLocal(); renderStatus(); scheduleSync(2000); }, 400);
+});
+document.getElementById("dayNotes").addEventListener("blur", () => { clearTimeout(notesTimer); saveLocal(); renderStatus(); scheduleSync(500); });
 
 function selectDay(id, user) {
   current = id;
@@ -522,10 +654,57 @@ function setItem(it, patch) {
   store.items[it.id] = Object.assign({ done: false, day: it.day }, store.items[it.id], patch, { at: Date.now() });
   commit();
 }
+// Several item changes as one save.
+function patchItems(patches) {
+  const now = Date.now();
+  for (const [id, patch] of Object.entries(patches)) {
+    const it = ITEMS.find(i => i.id === id);
+    store.items[id] = Object.assign({ done: false, day: it.day }, store.items[id], patch, { at: now });
+  }
+  commit();
+}
+// Ranks for a hand-ordered day, written only where they change.
+function rankPatches(ids, extra) {
+  const patches = {};
+  ids.forEach((id, i) => {
+    const p = Object.assign({}, extra && extra[id]);
+    if ((store.items[id] || {}).rank !== i * 10) p.rank = i * 10;
+    if (Object.keys(p).length) patches[id] = p;
+  });
+  return patches;
+}
+// Where an item should land in a day that is ordered by hand: before the first item with a later time.
+function placeByTime(day, it, time) {
+  const others = dayOrder(day).filter(o => o.id !== it.id);
+  let at = others.findIndex(o => timeKey(effTime(o)) > timeKey(time));
+  if (at < 0) at = others.length;
+  const ids = others.map(o => o.id);
+  ids.splice(at, 0, it.id);
+  return ids;
+}
 function moveItem(it, to) {
-  const from = effDay(it);
-  setItem(it, { day: to });
-  toast("Moved " + it.name + " to Day " + dayNum(to) + ".", () => setItem(it, { day: from }));
+  const before = Object.assign({}, store.items[it.id]);
+  const ranked = itemsFor(to).some(hasRank);
+  patchItems(ranked ? rankPatches(placeByTime(to, it, effTime(it)), { [it.id]: { day: to } }) : { [it.id]: { day: to, rank: null } });
+  toast("Moved " + it.name + " to Day " + dayNum(to) + ".", () =>
+    patchItems({ [it.id]: { day: before.day || it.day, rank: typeof before.rank === "number" ? before.rank : null } }));
+}
+function shiftItem(it, dir) {
+  const ids = dayOrder(effDay(it)).map(o => o.id);
+  const i = ids.indexOf(it.id), j = i + dir;
+  if (j < 0 || j >= ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  patchItems(rankPatches(ids));
+}
+function removeItem(it) {
+  editing.delete(it.id);
+  setItem(it, { deleted: true });
+  toast("Deleted " + it.name + ".", () => setItem(it, { deleted: false }));
+}
+function restoreItem(it) {
+  const day = effDay(it);
+  const ranked = itemsFor(day).some(hasRank);
+  patchItems(ranked ? rankPatches(placeByTime(day, it, effTime(it)), { [it.id]: { deleted: false } }) : { [it.id]: { deleted: false } });
 }
 function setExtra(id, patch) {
   store.extras[id] = Object.assign({}, store.extras[id], patch, { at: Date.now() });
@@ -553,8 +732,8 @@ function stable(v) {
 // Per item, the most recent change wins; `b` wins ties.
 function merge(a, b) {
   a = normalise(a); b = normalise(b);
-  const out = { items: {}, extras: {} };
-  for (const sec of ["items", "extras"]) {
+  const out = emptyStore();
+  for (const sec of SECTIONS) {
     const keys = new Set([...Object.keys(a[sec]), ...Object.keys(b[sec])]);
     keys.forEach(k => {
       const x = a[sec][k], y = b[sec][k];
@@ -565,7 +744,7 @@ function merge(a, b) {
 }
 function pendingCount() {
   let n = 0;
-  for (const sec of ["items", "extras"]) {
+  for (const sec of SECTIONS) {
     const keys = new Set([...Object.keys(store[sec]), ...Object.keys(synced[sec])]);
     keys.forEach(k => { if (stable(store[sec][k]) !== stable(synced[sec][k])) n++; });
   }
@@ -638,6 +817,7 @@ async function writeRemote(data, sha) {
   return true;
 }
 
+const emptyStore = () => ({ items: {}, extras: {}, notes: {} });
 const connected = () => !!(cfg.token && cfg.owner && cfg.repo && cfg.branch && cfg.path);
 let syncing = false, again = false, syncTimer = null, lastError = null;
 
@@ -656,7 +836,7 @@ async function sync() {
     for (let attempt = 0; attempt < 3 && !done; attempt++) {
       const remote = await readRemote();
       if (!remote.sha) await ensureBranch();
-      const base = remote.data || { items: {}, extras: {} };
+      const base = normalise(remote.data);
       const merged = merge(base, store);
       if (stable(merged) !== stable(base)) done = await writeRemote(merged, remote.sha);
       else done = true;
