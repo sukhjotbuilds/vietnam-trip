@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Vietnam Trip Checklist</title>
+<meta name="theme-color" content="#1f5c4a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vietnam">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Literata:opsz,wght@7..72,500;7..72,700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; }
+[hidden] { display: none !important; }
+img { max-width: 100%; }
+/* Layout: a sticky strip of day tabs, then one narrow column per day — day header, time-ordered checklist, places we added, add-a-place form. */
+:root {
+  --bg: #f3f5f2;
+  --surface: #ffffff;
+  --ink: #17231f;
+  --muted: #5c6b65;
+  --line: #d9e0dc;
+  --jade: #1f5c4a;
+  --jade-soft: #e1ece7;
+  --gold: #b8860b;
+  --gold-soft: #f6ecd2;
+  --done: #8a9892;
+  --danger: #a33a2a;
+  --font-display: "Literata", Georgia, "Times New Roman", serif;
+  --font-body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1614; --surface: #17211e; --ink: #e6ede9; --muted: #9aaaa3; --line: #2a3833;
+    --jade: #6fc2a5; --jade-soft: #1d332c; --gold: #e2b85a; --gold-soft: #33291a; --done: #6b7a74; --danger: #e48a7a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1614; --surface: #17211e; --ink: #e6ede9; --muted: #9aaaa3; --line: #2a3833;
+  --jade: #6fc2a5; --jade-soft: #1d332c; --gold: #e2b85a; --gold-soft: #33291a; --done: #6b7a74; --danger: #e48a7a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); margin: 0;
+  font: 15px/1.5 var(--font-body);
+  padding-block: 0 64px;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.gutter {
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 680px; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+
+/* Day tabs */
+.tabs-band { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.tabs { max-width: 680px; margin: 0 auto; display: flex; gap: 6px; overflow-x: auto; padding-block: 10px; scrollbar-width: none; scroll-snap-type: x proximity; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab {
+  flex: 0 0 auto; scroll-snap-align: start; display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  font: inherit; text-align: left; cursor: pointer; color: var(--ink);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px 11px 7px; min-width: 76px;
+}
+.tab .d { font: 500 11px var(--font-data); color: var(--muted); letter-spacing: .04em; }
+.tab .c { font-weight: 600; font-size: 13px; white-space: nowrap; }
+.tab .n { font: 500 11px var(--font-data); color: var(--muted); font-variant-numeric: tabular-nums; }
+.tab.complete .n { color: var(--jade); }
+.tab[aria-selected="true"] { background: var(--jade); border-color: var(--jade); color: var(--surface); }
+.tab[aria-selected="true"] .d, .tab[aria-selected="true"] .n { color: var(--surface); opacity: .8; }
+.tab:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+main { padding-block: 24px 0; }
+header { display: flex; flex-direction: column; gap: 10px; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+h1 { font: 700 clamp(28px, 6vw, 40px)/1.1 var(--font-display); margin: 0; text-wrap: balance; }
+h1 .city { color: var(--jade); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: 14px; }
+.meta b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.progress { display: flex; align-items: center; gap: 12px; }
+.bar { flex: 1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--jade); transition: width .3s ease; }
+.progress span { font: 500 13px var(--font-data); color: var(--muted); font-variant-numeric: tabular-nums; min-width: 4.5em; text-align: right; }
+.sync { font-size: 12px; color: var(--muted); }
+
+.list { display: flex; flex-direction: column; }
+.slot { display: grid; grid-template-columns: 64px 1fr; gap: 0 12px; border-top: 1px solid var(--line); padding-block: 14px; }
+.slot:last-child { border-bottom: 1px solid var(--line); }
+.time { font: 500 13px/1.9 var(--font-data); color: var(--muted); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.items { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.or { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); font-weight: 600; margin-block: -4px; padding-left: 34px; }
+
+.item { display: grid; grid-template-columns: 22px 1fr; gap: 12px; align-items: start; }
+.item input[type="checkbox"] {
+  appearance: none; width: 22px; height: 22px; margin: 2px 0 0; border: 2px solid var(--muted); border-radius: 6px;
+  background: var(--surface); cursor: pointer; display: grid; place-items: center; transition: background .15s, border-color .15s;
+}
+.item input[type="checkbox"]::after { content: ""; width: 6px; height: 11px; border: solid var(--surface); border-width: 0 2.5px 2.5px 0; transform: rotate(45deg) translate(-1px, -1px); opacity: 0; }
+.item input[type="checkbox"]:checked { background: var(--jade); border-color: var(--jade); }
+.item input[type="checkbox"]:checked::after { opacity: 1; }
+.item input[type="checkbox"]:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.body { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.name { font-weight: 600; font-size: 16px; overflow-wrap: anywhere; }
+.desc { color: var(--muted); font-size: 14px; }
+.tip { font-size: 13px; color: var(--ink); background: var(--gold-soft); border-radius: 6px; padding: 4px 8px; align-self: flex-start; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 13px; color: var(--muted); }
+.tag { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; color: var(--jade); }
+.cost { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.row a { color: var(--jade); font-weight: 500; text-decoration: none; }
+.row a:hover { text-decoration: underline; }
+.item.done .name { color: var(--done); text-decoration: line-through; text-decoration-thickness: 1.5px; }
+.item.done .desc, .item.done .tip { opacity: .55; }
+.flag { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+
+/* Move-to-day control: a quiet select that reads like a link */
+.move { position: relative; display: inline-flex; align-items: center; gap: 4px; color: var(--muted); }
+.move select {
+  appearance: none; font: inherit; font-size: 13px; color: var(--muted); background: transparent;
+  border: 0; padding: 0 14px 0 0; cursor: pointer; min-width: 0; max-width: 12em;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: right 5px center, right 1px center; background-size: 4px 4px; background-repeat: no-repeat;
+}
+.move select:hover { color: var(--ink); }
+.move select:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+.move select:disabled { cursor: default; opacity: .6; }
+
+.remove { background: none; border: 0; padding: 0; font: inherit; font-size: 13px; color: var(--muted); cursor: pointer; }
+.remove:hover, .remove.armed { color: var(--danger); }
+.remove:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+
+section h2 { font: 700 20px/1.2 var(--font-display); margin: 0 0 4px; }
+section .hint { color: var(--muted); font-size: 14px; margin: 0 0 14px; }
+.extras-list { display: flex; flex-direction: column; gap: 14px; }
+.empty { color: var(--muted); font-size: 14px; border: 1px dashed var(--line); border-radius: 10px; padding: 14px; }
+
+form { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 520px) { .fields { grid-template-columns: 1fr; } }
+label.field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; color: var(--muted); min-width: 0; }
+.field input, .field select {
+  font: 15px var(--font-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 9px 11px; width: 100%; min-width: 0;
+}
+.field input:focus-visible, .field select:focus-visible { outline: 2px solid var(--jade); outline-offset: 1px; border-color: transparent; }
+.full { grid-column: 1 / -1; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+button.primary { font: 600 15px var(--font-body); background: var(--jade); color: var(--surface); border: 0; border-radius: 8px; padding: 10px 18px; cursor: pointer; }
+button.primary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.msg { font-size: 13px; color: var(--muted); }
+.msg.err { color: var(--danger); }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 20;
+  background: var(--ink); color: var(--bg); font-size: 14px; padding: 9px 14px; border-radius: 10px; max-width: calc(100% - 32px);
+  display: flex; gap: 12px; align-items: center; }
+.toast button { background: none; border: 0; color: var(--bg); font: 600 14px var(--font-body); text-decoration: underline; cursor: pointer; padding: 0; }
+
+footer { color: var(--muted); font-size: 13px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* Standalone additions: safe areas on the tab strip, sync status and the GitHub settings panel */
+.tabs-band { padding-top: env(safe-area-inset-top, 0px); top: 0; }
+.sync { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.sync .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
+.sync.ok .dot { background: var(--jade); }
+.sync.wait .dot { background: var(--gold); }
+.sync.err .dot { background: var(--danger); }
+.linkbtn { background: none; border: 0; padding: 0; font: inherit; font-size: 12px; color: var(--jade); font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.linkbtn:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 3px; }
+details.settings { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 0 16px; }
+details.settings summary { cursor: pointer; padding-block: 14px; font: 700 17px/1.2 var(--font-display); list-style-position: inside; }
+details.settings[open] summary { border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+details.settings .inner { display: flex; flex-direction: column; gap: 12px; padding-bottom: 16px; }
+details.settings p { margin: 0; color: var(--muted); font-size: 14px; }
+details.settings form { background: none; border: 0; padding: 0; }
+button.secondary { font: 600 15px var(--font-body); background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 9px 16px; cursor: pointer; }
+button.secondary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+code { font-family: var(--font-data); font-size: 12.5px; background: var(--jade-soft); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<div class="tabs-band gutter">
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Trip days"></nav>
+</div>
+
+<main class="gutter">
+  <div class="wrap">
+    <header>
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1 id="title"></h1>
+      <div class="meta" id="meta"></div>
+      <div class="progress" aria-live="polite">
+        <div class="bar"><i id="bar"></i></div>
+        <span id="count">0 / 0</span>
+      </div>
+      <div class="sync" id="sync"><span class="dot"></span><span id="syncText">Saved on this phone</span><button type="button" class="linkbtn" id="syncNow" hidden>Sync now</button></div>
+    </header>
+
+    <div class="list" id="list"></div>
+
+    <section>
+      <h2>Places we added</h2>
+      <p class="hint">Restaurants, cafés or shops you find along the way.</p>
+      <div class="extras-list" id="extras"></div>
+    </section>
+
+    <section id="addSection">
+      <h2>Add a place</h2>
+      <p class="hint">Copy the link from Google Maps (Share → Copy link) and paste it below.</p>
+      <form id="addForm" novalidate>
+        <div class="fields">
+          <label class="field full">Name
+            <input type="text" id="addName" placeholder="e.g. Bánh Mì 25" autocomplete="off" maxlength="120">
+          </label>
+          <label class="field">Google Maps link
+            <input type="url" id="addUrl" placeholder="https://maps.app.goo.gl/…" autocomplete="off" inputmode="url">
+          </label>
+          <label class="field">Type
+            <select id="addKind">
+              <option>Food</option>
+              <option>Café</option>
+              <option>Shop</option>
+              <option>Bar</option>
+              <option>Sight</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label class="field full">Note (optional)
+            <input type="text" id="addNote" placeholder="e.g. Recommended by the hotel" autocomplete="off" maxlength="200">
+          </label>
+        </div>
+        <div class="actions">
+          <button type="submit" class="primary" id="addBtn">Add</button>
+          <span class="msg" id="addMsg"></span>
+        </div>
+      </form>
+    </section>
+
+    <details class="settings" id="settings">
+      <summary>GitHub sync</summary>
+      <div class="inner">
+        <p>Every change is saved on this phone first. When you're online and connected below, changes are sent to a file in your GitHub repo, and changes from anyone else using the same repo come back.</p>
+        <form id="ghForm" novalidate>
+          <div class="fields">
+            <label class="field">GitHub username
+              <input type="text" id="ghOwner" autocomplete="off" autocapitalize="off" spellcheck="false">
+            </label>
+            <label class="field">Repository
+              <input type="text" id="ghRepo" autocomplete="off" autocapitalize="off" spellcheck="false">
+            </label>
+            <label class="field">Branch for the data
+              <input type="text" id="ghBranch" autocomplete="off" autocapitalize="off" spellcheck="false">
+            </label>
+            <label class="field">File
+              <input type="text" id="ghPath" autocomplete="off" autocapitalize="off" spellcheck="false">
+            </label>
+            <label class="field full">Access token
+              <input type="password" id="ghToken" placeholder="github_pat_…" autocomplete="off" autocapitalize="off" spellcheck="false">
+            </label>
+          </div>
+          <p>Use a fine-grained token that can only reach this one repository, with Contents set to Read and write. It stays on this phone.</p>
+          <div class="actions">
+            <button type="submit" class="primary">Save and sync</button>
+            <button type="button" class="secondary" id="ghDisconnect">Disconnect</button>
+            <span class="msg" id="ghMsg"></span>
+          </div>
+        </form>
+      </div>
+    </details>
+
+    <footer>Costs in VND, with USD in brackets. “Find on Maps” searches Google Maps for the place. Use “Move to…” on any item to switch it to another day.</footer>
+  </div>
+</main>
+
+<div class="toast" id="toast" hidden></div>
+<script>
+const DATA = {"days": [{"id": "D1", "date": "Oct 31", "weekday": "Sat", "iso": "2026-10-31", "cities": ["Hanoi"]}, {"id": "D2", "date": "Nov 1", "weekday": "Sun", "iso": "2026-11-01", "cities": ["Cat Ba"]}, {"id": "D3", "date": "Nov 2", "weekday": "Mon", "iso": "2026-11-02", "cities": ["Cat Ba"]}, {"id": "D4", "date": "Nov 3", "weekday": "Tue", "iso": "2026-11-03", "cities": ["Ninh Binh"]}, {"id": "D5", "date": "Nov 4", "weekday": "Wed", "iso": "2026-11-04", "cities": ["Ninh Binh", "Hanoi"]}, {"id": "D6", "date": "Nov 5", "weekday": "Thu", "iso": "2026-11-05", "cities": ["Ha Giang"]}, {"id": "D7", "date": "Nov 6", "weekday": "Fri", "iso": "2026-11-06", "cities": ["Ha Giang"]}, {"id": "D8", "date": "Nov 7", "weekday": "Sat", "iso": "2026-11-07", "cities": ["Ha Giang"]}, {"id": "D9", "date": "Nov 8", "weekday": "Sun", "iso": "2026-11-08", "cities": ["Hanoi"]}, {"id": "D10", "date": "Nov 9", "weekday": "Mon", "iso": "2026-11-09", "cities": ["Hanoi"]}, {"id": "D11", "date": "Nov 10", "weekday": "Tue", "iso": "2026-11-10", "cities": ["Hanoi"]}], "items": [{"id": "d1-01", "day": "D1", "time": "10:00", "name": "Airport Arrival", "desc": "Land at Noi Bai. Immigration + baggage ~45 min.", "cat": "Logistics", "vnd": "", "usd": "", "tip": "Allow 1 hr for immigration", "city": "Hanoi"}, {"id": "d1-02", "day": "D1", "time": "11:00", "name": "Grab to Old Quarter", "desc": "Taxi from Noi Bai to Old Quarter hotel. Book inside arrivals on Grab app.", "cat": "Travel", "vnd": "250,000–300,000", "usd": "10–12", "tip": "Do NOT take non-metered cabs outside", "city": "Hanoi"}, {"id": "d1-03", "day": "D1", "time": "13:00", "name": "Bún Chả Hương Liên", "desc": "8 Chân Cầm St — 'Obama bún chả'. Grilled pork + noodles + broth. Iconic.", "cat": "Food", "vnd": "80,000", "usd": "3", "tip": "Get full set with nem rán", "city": "Hanoi", "group": "Lunch", "option": 1, "q": "Bún Chả Hương Liên, Hanoi"}, {"id": "d1-04", "day": "D1", "time": "13:00", "name": "Bún Bò Nam Bộ", "desc": "67 Hàng Điếu. Dry noodle bowl, sliced beef, herbs, crispy shallots. Lighter.", "cat": "Food", "vnd": "60,000", "usd": "2.5", "tip": "No broth — good if you're hot and tired", "city": "Hanoi", "group": "Lunch", "option": 2, "q": "Bún Bò Nam Bộ, Hanoi"}, {"id": "d1-05", "day": "D1", "time": "15:00", "name": "Hoan Kiem Old Quarter Walk", "desc": "Stroll 36 streets — Hàng Gai, Hàng Bạc, Mã Mây. St Joseph's Cathedral (free).", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "Get your bearings. Note what to shop later.", "city": "Hanoi", "q": "Hoan Kiem Old Quarter Walk, Hanoi"}, {"id": "d1-06", "day": "D1", "time": "16:00", "name": "Café Giang — Egg Coffee", "desc": "39 Nguyễn Hữu Huân. Birthplace of cà phê trứng (1946). Sit upstairs on terrace.", "cat": "Food", "vnd": "35,000", "usd": "1.5", "tip": "Also try the egg chocolate if curious", "city": "Hanoi", "q": "Café Giang — Egg Coffee, Hanoi"}, {"id": "d1-07", "day": "D1", "time": "17:30", "name": "Hoan Kiem Lake walk", "desc": "Golden hour at Huc Bridge and Ngoc Son Temple. Walk the lake perimeter.", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "Temple entry 30,000 if you go inside", "city": "Hanoi", "q": "Hoan Kiem Lake walk, Hanoi"}, {"id": "d1-08", "day": "D1", "time": "19:00", "name": "Bia Hoi Corner", "desc": "Corner of Tạ Hiện & Lương Ngọc Quyện. Plastic stools, 10,000 VND fresh beer.", "cat": "Experience", "vnd": "50,000", "usd": "2", "tip": "Peak Old Quarter chaos. Sit and absorb.", "city": "Hanoi", "q": "Bia Hoi Corner, Hanoi"}, {"id": "d1-09", "day": "D1", "time": "20:00", "name": "Phở Gia Truyền Bát Đàn", "desc": "49 Bát Đàn. Best phở bò in Hanoi. Queue outside, moves fast. Open 18:00–22:00.", "cat": "Food", "vnd": "60,000", "usd": "2.5", "tip": "Also open 06:00–14:00 — good for any morning", "city": "Hanoi", "group": "Dinner", "option": 1, "q": "Phở Gia Truyền Bát Đàn, Hanoi"}, {"id": "d1-10", "day": "D1", "time": "20:00", "name": "Bún Bò Huế Bà Bếp", "desc": "Various Old Quarter locations. Spicy Hue-style noodle soup — different profile from phở.", "cat": "Food", "vnd": "65,000", "usd": "2.5", "tip": "Spicier and heartier than phở", "city": "Hanoi", "group": "Dinner", "option": 2}, {"id": "d2-01", "day": "D2", "time": "07:30", "name": "Bus Hanoi → Cat Ba", "desc": "Depart Old Quarter. Minibus to Haiphong + ferry to Cat Hải + van to Cat Ba. ~3.5 hrs.", "cat": "Travel", "vnd": "250,000–300,000", "usd": "10–12", "tip": "Book through guesthouse or Hung Yen Bus", "city": "Cat Ba"}, {"id": "d2-02", "day": "D2", "time": "11:30", "name": "Check in + freshen up", "desc": "Arrive Cat Ba Town. Stay near Cat Co 1 beach side — avoid main waterfront (construction 2026).", "cat": "Logistics", "vnd": "", "usd": "", "tip": "Ask guesthouse about today's fresh catch", "city": "Cat Ba"}, {"id": "d2-03", "day": "D2", "time": "12:30", "name": "Cat Ba Oasis", "desc": "Best consistently reviewed restaurant. Seafood rice, spring rolls, morning glory.", "cat": "Food", "vnd": "150,000", "usd": "6", "tip": "Ask what's fresh today", "city": "Cat Ba", "group": "Lunch", "option": 1, "q": "Cat Ba Oasis, Cat Ba"}, {"id": "d2-04", "day": "D2", "time": "12:30", "name": "Green Mango Restaurant", "desc": "Upscale by island standards. Mantis shrimp (tôm tít) — Cat Ba's signature seafood.", "cat": "Food", "vnd": "200,000", "usd": "8", "tip": "Try mantis shrimp — Cat Ba specialty", "city": "Cat Ba", "group": "Lunch", "option": 2, "q": "Green Mango Restaurant, Cat Ba"}, {"id": "d2-05", "day": "D2", "time": "14:00", "name": "Cat Co 1 Beach", "desc": "10-min walk from town. Quieter than Cat Co 2. Swim, relax, recover from travel.", "cat": "Experience", "vnd": "50,000", "usd": "2", "tip": "Entry fee at gate", "city": "Cat Ba", "q": "Cat Co 1 Beach, Cat Ba"}, {"id": "d2-06", "day": "D2", "time": "17:30", "name": "Hospital Cave Lookout Sunset", "desc": "30-min hike up the hill behind town. Panoramic bay views. Best light of the day.", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "Worth every step — 360° view", "city": "Cat Ba", "q": "Hospital Cave Lookout Sunset, Cat Ba"}, {"id": "d2-07", "day": "D2", "time": "19:00", "name": "Green Mango", "desc": "Mantis shrimp, whole grilled fish, cold Bia Hanoi. Sit outside if weather allows.", "cat": "Food", "vnd": "200,000", "usd": "8", "tip": "Order 1/2 kg mantis shrimp to share", "city": "Cat Ba", "group": "Dinner", "option": 1, "q": "Green Mango, Cat Ba"}, {"id": "d2-08", "day": "D2", "time": "19:00", "name": "Local back-street grill", "desc": "Ask guesthouse for cá nướng (grilled fish) spots — cheaper and more local.", "cat": "Food", "vnd": "100,000", "usd": "4", "tip": "Locals eat here, not on the waterfront", "city": "Cat Ba", "group": "Dinner", "option": 2}, {"id": "d2-09", "day": "D2", "time": "20:30", "name": "Cat Ba Night Market", "desc": "Near the pier. Dried seafood, local snacks. Buy squid chips as souvenir/snack.", "cat": "Shopping", "vnd": "50,000–100,000", "usd": "2–4", "tip": "Vacuum-packed dried squid travels well", "city": "Cat Ba", "q": "Cat Ba Night Market, Cat Ba"}, {"id": "d2-10", "day": "D2", "time": "21:30", "name": "Flightless Bird Backpackers Bar", "desc": "Best bar on island. Pool table, Tiger beer 30,000 VND. Backpacker crowd.", "cat": "Experience", "vnd": "60,000", "usd": "2.5", "tip": "Sociable and low-key", "city": "Cat Ba", "q": "Flightless Bird Backpackers Bar, Cat Ba"}, {"id": "d3-01", "day": "D3", "time": "07:30", "name": "Lan Ha Bay Kayak Tour (Full Day)", "desc": "Asia Outdoors or Cat Ba Ventures. Boat + kayak + guide + lunch + snorkeling included.", "cat": "Experience", "vnd": "750,000–950,000", "usd": "30–38", "tip": "Book 1 day ahead. Lan Ha = less crowded than Ha Long", "city": "Cat Ba", "q": "Lan Ha Bay Kayak Tour (Full Day), Cat Ba"}, {"id": "d3-02", "day": "D3", "time": "08:30", "name": "Kayaking karst caves", "desc": "Paddle through hidden lagoons and sea caves. Dark passage routes are stunning.", "cat": "Experience", "vnd": "Included", "usd": "Included", "tip": "Bring reef shoes + small waterproof bag", "city": "Cat Ba"}, {"id": "d3-03", "day": "D3", "time": "11:30", "name": "Swim at floating village", "desc": "Jump off the boat. Floating fishing village visit.", "cat": "Experience", "vnd": "Included", "usd": "Included", "tip": "Ask guide for monkey island stop", "city": "Cat Ba"}, {"id": "d3-04", "day": "D3", "time": "12:30", "name": "Lunch on boat", "desc": "Fresh seafood onboard: squid, clams, rice, morning glory.", "cat": "Food", "vnd": "Included", "usd": "Included", "tip": "Usually excellent", "city": "Cat Ba"}, {"id": "d3-05", "day": "D3", "time": "19:30", "name": "Night squid fishing (optional)", "desc": "1-2 hrs on small boat with UV light rigs. Book with pier-side operator.", "cat": "Experience", "vnd": "200,000", "usd": "8", "tip": "Incredibly fun. Book same day at pier.", "city": "Cat Ba", "q": "Night squid fishing (optional), Cat Ba"}, {"id": "d3-06", "day": "D3", "time": "21:00", "name": "Cat Ba Oasis", "desc": "If you didn't eat there Day 1. Consistently the best value on the island.", "cat": "Food", "vnd": "150,000", "usd": "6", "tip": "", "city": "Cat Ba", "group": "Dinner", "option": 1, "q": "Cat Ba Oasis, Cat Ba"}, {"id": "d3-07", "day": "D3", "time": "21:00", "name": "Simple grilled fish", "desc": "Any back-street spot. Cá nướng + rice + bia Hanoi. Eat light after full water day.", "cat": "Food", "vnd": "100,000", "usd": "4", "tip": "", "city": "Cat Ba", "group": "Dinner", "option": 2}, {"id": "d3-08", "day": "D3", "time": "", "name": "Dried squid (mực khô)", "desc": "Night market or pier. Vacuum packs travel well. Take as gifts or snacks.", "cat": "Shopping", "vnd": "50,000–80,000", "usd": "2–3", "tip": "", "city": "Cat Ba", "q": "Dried squid (mực khô), Cat Ba"}, {"id": "d3-09", "day": "D3", "time": "", "name": "Fish sauce (nước mắm)", "desc": "Any grocery store. Phu Quoc brand. Carry-on friendly if sealed well.", "cat": "Shopping", "vnd": "30,000–60,000", "usd": "1–2", "tip": "", "city": "Cat Ba"}, {"id": "d4-01", "day": "D4", "time": "08:00", "name": "Bus Cat Ba → Ninh Binh (direct)", "desc": "Ninh Binh Interbus or similar. Bus + ferry combo ~4-5 hrs. Arrive Tam Coc ~13:00–14:00.", "cat": "Travel", "vnd": "200,000–550,000", "usd": "8–22", "tip": "'Direct' = multiple handoffs. Normal.", "city": "Ninh Binh"}, {"id": "d4-02", "day": "D4", "time": "13:00", "name": "Check in: Trang An Cozy House", "desc": "Stay in Tam Coc/Trang An area — NOT Ninh Binh City. Cozy House: Que & Tun, ★4.9.", "cat": "Logistics", "vnd": "", "usd": "", "tip": "Call +84 916 962 503. Walk to everything.", "city": "Ninh Binh"}, {"id": "d4-03", "day": "D4", "time": "14:30", "name": "Trang An Boat Ride (Route 3)", "desc": "UNESCO site. 3-hr boat through 9 caves. Boatwoman rows — tip her well.", "cat": "Experience", "vnd": "250,000", "usd": "10", "tip": "Opens 07:00. Afternoon is quieter.", "city": "Ninh Binh", "q": "Trang An Boat Ride (Route 3), Ninh Binh"}, {"id": "d4-04", "day": "D4", "time": "19:00", "name": "Cơm Cháy (crispy rice)", "desc": "THE Ninh Binh dish. Crispy rice cakes served with dipping sauces. Any local spot near Tam Coc.", "cat": "Food", "vnd": "60,000–80,000", "usd": "2.5–3", "tip": "Iconic. Don't leave without trying it.", "city": "Ninh Binh", "group": "Dinner", "option": 1, "q": "Cơm Cháy (crispy rice), Ninh Binh"}, {"id": "d4-05", "day": "D4", "time": "19:00", "name": "Dê núi (mountain goat)", "desc": "Ninh Binh specialty. Grilled + steam. Any restaurant advertising 'thịt dê'.", "cat": "Food", "vnd": "150,000", "usd": "6", "tip": "Local specialty, different from everyday menus", "city": "Ninh Binh", "group": "Dinner", "option": 2, "q": "Dê núi (mountain goat), Ninh Binh"}, {"id": "d4-06", "day": "D4", "time": "19:00", "name": "Tam Coc Garden Restaurant", "desc": "Well-reviewed, local specialties, good variety including ốc (snails) and com lam.", "cat": "Food", "vnd": "120,000–180,000", "usd": "5–7", "tip": "Nice setting, slightly more polished", "city": "Ninh Binh", "group": "Dinner", "option": 3, "q": "Tam Coc Garden Restaurant, Ninh Binh"}, {"id": "d5-01", "day": "D5", "time": "06:45", "name": "Hang Mua / Mua Cave viewpoint", "desc": "486 steps. Go BEFORE 09:00 — only 20-30 people at sunrise vs 200+ by 10am. Views over Tam Coc valley.", "cat": "Experience", "vnd": "100,000", "usd": "4", "tip": "Best sunrise in Ninh Binh. Non-negotiable.", "city": "Ninh Binh", "q": "Hang Mua / Mua Cave viewpoint, Ninh Binh"}, {"id": "d5-02", "day": "D5", "time": "08:30", "name": "Cycle Bich Dong road", "desc": "Free bike from guesthouse. Flat paddy road to Bich Dong Pagoda. 30-min loop.", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "One of the prettiest morning rides", "city": "Ninh Binh", "q": "Cycle Bich Dong road, Ninh Binh"}, {"id": "d5-03", "day": "D5", "time": "09:30", "name": "Bich Dong Pagoda", "desc": "3-level pagoda carved into limestone cliff. Lower grotto is eerie and cool.", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "Combine with the cycle easily", "city": "Ninh Binh", "q": "Bich Dong Pagoda, Ninh Binh"}, {"id": "d5-04", "day": "D5", "time": "10:30", "name": "Local market area", "desc": "Bún bò Nam Bộ or cơm tấm near Tam Coc market. Great cheap local eats.", "cat": "Food", "vnd": "50,000", "usd": "2", "tip": "Eat before transit — hard to eat on bus", "city": "Ninh Binh", "group": "Breakfast", "option": 1, "q": "Local market area, Ninh Binh"}, {"id": "d5-05", "day": "D5", "time": "10:30", "name": "Guesthouse breakfast", "desc": "Many guesthouses offer simple breakfast. Ask Que & Tun the night before.", "cat": "Food", "vnd": "40,000–60,000", "usd": "2", "tip": "Convenient before early checkout", "city": "Ninh Binh", "group": "Breakfast", "option": 2, "q": "Guesthouse breakfast, Ninh Binh"}, {"id": "d5-06", "day": "D5", "time": "12:00", "name": "Train/Bus Ninh Binh → Hanoi", "desc": "Train SE8 departs ~12:10, arrives Hanoi 14:00 (~60,000 VND). Bus also available ~100,000 VND.", "cat": "Travel", "vnd": "60,000–100,000", "usd": "2.5–4", "tip": "Taxi from Tam Coc to station: 15 min/50,000 VND", "city": "Ninh Binh"}, {"id": "d5-07", "day": "D5", "time": "14:30", "name": "Check in Old Quarter hotel", "desc": "Drop bags. Freshen up before evening activities.", "cat": "Logistics", "vnd": "", "usd": "", "tip": "", "city": "Hanoi"}, {"id": "d5-08", "day": "D5", "time": "15:30", "name": "Hoa Lo Prison (Hanoi Hilton)", "desc": "01 Hoa Lo St. Dark history well-presented. Closes 17:00 — go straight from hotel.", "cat": "Experience", "vnd": "35,000", "usd": "1.5", "tip": "Surprisingly moving. Don't skip.", "city": "Hanoi", "q": "Hoa Lo Prison (Hanoi Hilton), Hanoi"}, {"id": "d5-09", "day": "D5", "time": "17:00", "name": "Temple of Literature", "desc": "Văn Miếu. 1000-year-old Confucian university. Beautiful courtyards, stone stele.", "cat": "Experience", "vnd": "70,000", "usd": "3", "tip": "Best in late afternoon light", "city": "Hanoi", "q": "Temple of Literature, Hanoi"}, {"id": "d5-10", "day": "D5", "time": "18:30", "name": "Phở Gia Truyền Bát Đàn", "desc": "49 Bát Đàn. The reliable Hanoi classic. Pre-night bus comfort food.", "cat": "Food", "vnd": "60,000", "usd": "2.5", "tip": "Light enough before overnight bus", "city": "Hanoi", "group": "Dinner", "option": 1, "q": "Phở Gia Truyền Bát Đàn, Hanoi"}, {"id": "d5-11", "day": "D5", "time": "18:30", "name": "Bún Chả Hương Liên", "desc": "8 Chân Cầm. Grilled pork + noodles. Classic. If you didn't go Day 1.", "cat": "Food", "vnd": "80,000", "usd": "3", "tip": "", "city": "Hanoi", "group": "Dinner", "option": 2, "q": "Bún Chả Hương Liên, Hanoi"}, {"id": "d5-12", "day": "D5", "time": "18:30", "name": "Bánh Mì 25", "desc": "25 Hàng Cá. Widely considered Hanoi's best bánh mì. Good pre-bus grab.", "cat": "Food", "vnd": "45,000", "usd": "2", "tip": "Quick. Grab one for the bus too.", "city": "Hanoi", "group": "Dinner", "option": 3, "q": "Bánh Mì 25, Hanoi"}, {"id": "d5-13", "day": "D5", "time": "21:00", "name": "Night Bus Hanoi → Ha Giang", "desc": "Sleeper bus from Hanoi. ~7 hrs. Arrives Ha Giang ~04:00–05:00. Hung Thanh operator.", "cat": "Travel", "vnd": "200,000–250,000", "usd": "8–10", "tip": "Book in advance. Bring jacket — AC is cold.", "city": "Transit"}, {"id": "d5-14", "day": "D5", "time": "21:00", "name": "Arjun: Bus from Airport → Ha Giang", "desc": "9:30pm or 11pm bus from Noi Bai Airport direct to Ha Giang. Arjun lands 18:00.", "cat": "Logistics", "vnd": "", "usd": "", "tip": "Arjun books independently. Coordinate arrival time.", "city": "Transit"}, {"id": "d6-01", "day": "D6", "time": "04:30", "name": "Arrive Ha Giang City", "desc": "Bus drops at station. Grab/cab to tour operator guesthouse. SLEEP until 08:00.", "cat": "Travel", "vnd": "50,000", "usd": "2", "tip": "Cold at altitude. Have jacket accessible.", "city": "Ha Giang"}, {"id": "d6-02", "day": "D6", "time": "08:30", "name": "Loop Day 1 Departs", "desc": "Easy rider guides + motorbikes. Travel permit ~120,000 VND (operator handles). Meet Arjun.", "cat": "Logistics", "vnd": "120,000", "usd": "5", "tip": "Cash only past Ha Giang City", "city": "Ha Giang"}, {"id": "d6-03", "day": "D6", "time": "10:30", "name": "Quan Ba Heaven Gate (Cổng Trời)", "desc": "1,500m altitude. First major viewpoint. Twin Mountains (Fairy Bosom) in valley below.", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "Spend 30 min here minimum", "city": "Ha Giang", "q": "Quan Ba Heaven Gate (Cổng Trời), Ha Giang"}, {"id": "d6-04", "day": "D6", "time": "12:00", "name": "Lunch in Tam Son village", "desc": "Local com ga (chicken rice) or com rang. Guide picks the spot.", "cat": "Food", "vnd": "60,000", "usd": "2.5", "tip": "Trust the guide's restaurant choice", "city": "Ha Giang"}, {"id": "d6-05", "day": "D6", "time": "14:00–18:00", "name": "Ride through Yen Minh district", "desc": "Pine forests, waterfalls, military checkpoints (normal). Road gets dramatic.", "cat": "Experience", "vnd": "Included", "usd": "Included", "tip": "Windows for photos — both sides", "city": "Ha Giang"}, {"id": "d6-06", "day": "D6", "time": "18:00", "name": "Overnight: Yen Minh homestay", "desc": "Basic but authentic. Often with Hmong family. Hot shower, warm blankets.", "cat": "Logistics", "vnd": "150,000–200,000", "usd": "6–8", "tip": "Blanket included — still pack a layer", "city": "Ha Giang"}, {"id": "d6-07", "day": "D6", "time": "19:00", "name": "Homestay dinner", "desc": "Thắng cố (horse meat stew), bánh cuốn, pickled vegetables. Eat what they serve.", "cat": "Food", "vnd": "80,000", "usd": "3", "tip": "Included or ~80,000 VND", "city": "Ha Giang"}, {"id": "d6-08", "day": "D6", "time": "20:30", "name": "Corn wine with locals (rượu ngô)", "desc": "Offered by host. Hmong corn wine — slightly sweet, smooth. Small glass.", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "Bond with your guide over this", "city": "Ha Giang"}, {"id": "d7-01", "day": "D7", "time": "08:00", "name": "Loop Day 2 — Depart Yen Minh", "desc": "~60km toward Dong Van. Slow but spectacular. Most dramatic segment of loop.", "cat": "Travel", "vnd": "Included", "usd": "Included", "tip": "", "city": "Ha Giang"}, {"id": "d7-02", "day": "D7", "time": "10:00", "name": "Ma Pi Leng Pass (Đèo Mã Pí Lèng)", "desc": "2,000m altitude. Canyon drop to Nho Que River. Walk the balcony viewpoint.", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "The centrepiece. Spend 30-40 min here.", "city": "Ha Giang", "q": "Ma Pi Leng Pass (Đèo Mã Pí Lèng), Ha Giang"}, {"id": "d7-03", "day": "D7", "time": "11:30", "name": "Nho Que River boat (optional)", "desc": "Emerald river far below. Boat tour from the bottom. Only if energy allows.", "cat": "Experience", "vnd": "200,000", "usd": "8", "tip": "Optional but stunning", "city": "Ha Giang", "q": "Nho Que River boat (optional), Ha Giang"}, {"id": "d7-04", "day": "D7", "time": "13:00", "name": "Lunch: Dong Van town", "desc": "Com bình dân at any local house in Dong Van Old Town.", "cat": "Food", "vnd": "60,000", "usd": "2.5", "tip": "", "city": "Ha Giang"}, {"id": "d7-05", "day": "D7", "time": "14:30", "name": "Dong Van Old Quarter walk", "desc": "French-colonial + Hmong stone house architecture. UNESCO candidate.", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "Market area worth exploring", "city": "Ha Giang", "q": "Dong Van Old Quarter walk, Ha Giang"}, {"id": "d7-06", "day": "D7", "time": "16:00", "name": "Lung Cu Flag Tower (optional)", "desc": "Northernmost point of Vietnam. 40km detour. Worth it for the stamp.", "cat": "Experience", "vnd": "20,000", "usd": "1", "tip": "Add ~1.5 hrs to the day", "city": "Ha Giang", "q": "Lung Cu Flag Tower (optional), Ha Giang"}, {"id": "d7-07", "day": "D7", "time": "18:00", "name": "Overnight: Dong Van homestay", "desc": "Cooler here — proper blankets. Town has more options than rural stops.", "cat": "Logistics", "vnd": "150,000–200,000", "usd": "6–8", "tip": "", "city": "Ha Giang"}, {"id": "d7-08", "day": "D7", "time": "19:00", "name": "Dinner: Highland food alley", "desc": "Dong Van has more variety. Try H'mong hotpot or thắng cố.", "cat": "Food", "vnd": "80,000–120,000", "usd": "3–5", "tip": "", "city": "Ha Giang"}, {"id": "d7-09", "day": "D7", "time": "20:30", "name": "Stargazing", "desc": "Zero light pollution at 1,600m. Clear November night = Milky Way visible.", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "Step 5 min outside town", "city": "Ha Giang"}, {"id": "d8-01", "day": "D8", "time": "08:00", "name": "Loop Day 3 — Dong Van → Meo Vac", "desc": "~25km, 45 min. Final stretch of iconic canyon road. Dramatic views.", "cat": "Travel", "vnd": "Included", "usd": "Included", "tip": "", "city": "Ha Giang"}, {"id": "d8-02", "day": "D8", "time": "09:30", "name": "Meo Vac Sunday Market (if timing aligns)", "desc": "H'mong, Dao, Lo Lo ethnic groups in traditional dress. Livestock, produce, crafts.", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "Check if it's a Sunday — life-changing if so", "city": "Ha Giang", "q": "Meo Vac Sunday Market (if timing aligns), Ha Giang"}, {"id": "d8-03", "day": "D8", "time": "11:00", "name": "Ride back via southern route", "desc": "Du Gia canyon option — beautiful, less ridden. Ask guide.", "cat": "Experience", "vnd": "Included", "usd": "Included", "tip": "", "city": "Ha Giang"}, {"id": "d8-04", "day": "D8", "time": "13:00", "name": "Lunch en route", "desc": "Last highland meal. Com ga or bún bò Huế at guide's pick.", "cat": "Food", "vnd": "60,000", "usd": "2.5", "tip": "", "city": "Ha Giang"}, {"id": "d8-05", "day": "D8", "time": "16:00", "name": "Arrive Ha Giang City", "desc": "Return to operator guesthouse. Hot shower. Rest.", "cat": "Logistics", "vnd": "", "usd": "", "tip": "", "city": "Ha Giang"}, {"id": "d8-06", "day": "D8", "time": "18:00", "name": "Dinner: Bún riêu Ha Giang", "desc": "Crab noodle soup — this region's specialty. Any local restaurant in town.", "cat": "Food", "vnd": "70,000", "usd": "3", "tip": "", "city": "Ha Giang"}, {"id": "d8-07", "day": "D8", "time": "", "name": "H'mong textiles", "desc": "Indigo-dyed fabric, woven bags, embroidered pouches from Dong Van market. Buy on loop.", "cat": "Shopping", "vnd": "100,000–500,000", "usd": "4–20", "tip": "Best bought directly from village makers", "city": "Ha Giang", "q": "H'mong textiles, Ha Giang"}, {"id": "d8-08", "day": "D8", "time": "", "name": "Corn wine (rượu ngô)", "desc": "Bring a small bottle back. Available at Ha Giang market. Unique souvenir.", "cat": "Shopping", "vnd": "50,000–100,000", "usd": "2–4", "tip": "Wrap well — glass bottles", "city": "Ha Giang"}, {"id": "d9-01", "day": "D9", "time": "07:00", "name": "Bus Ha Giang → Hanoi", "desc": "Morning bus ~7 hrs. Arrive Hanoi afternoon/evening — timing uncertain.", "cat": "Travel", "vnd": "200,000–250,000", "usd": "8–10", "tip": "Book night before through operator", "city": "Transit"}, {"id": "d9-02", "day": "D9", "time": "Evening", "name": "Arrive Hanoi, check in", "desc": "Timing uncertain — plan nothing for tonight. Rest, food near hotel.", "cat": "Logistics", "vnd": "", "usd": "", "tip": "Keep evening free. You'll be tired.", "city": "Hanoi"}, {"id": "d9-03", "day": "D9", "time": "Evening", "name": "Phở near hotel", "desc": "Any Old Quarter phở shop. Comfort food after bus.", "cat": "Food", "vnd": "60,000", "usd": "2.5", "tip": "", "city": "Hanoi", "group": "Dinner", "option": 1}, {"id": "d9-04", "day": "D9", "time": "Evening", "name": "Bánh Mì 25", "desc": "25 Hàng Cá. Quick and satisfying. Closes ~22:00.", "cat": "Food", "vnd": "45,000", "usd": "2", "tip": "", "city": "Hanoi", "group": "Dinner", "option": 2, "q": "Bánh Mì 25, Hanoi"}, {"id": "d10-01", "day": "D10", "time": "06:30", "name": "Hoan Kiem Lake dawn walk", "desc": "Pre-crowd. Elderly locals doing tai chi and badminton. Misty lake in the morning.", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "The real Hanoi before tourists wake", "city": "Hanoi", "q": "Hoan Kiem Lake dawn walk, Hanoi"}, {"id": "d10-02", "day": "D10", "time": "07:30", "name": "Bánh Cuốn Gia Truyền Thanh Vân", "desc": "14 Hàng Gà. Steamed rice rolls with wood ear mushroom and pork. Crispy shallots.", "cat": "Food", "vnd": "45,000", "usd": "2", "tip": "Classic Hanoi breakfast", "city": "Hanoi", "group": "Breakfast", "option": 1, "q": "Bánh Cuốn Gia Truyền Thanh Vân, Hanoi"}, {"id": "d10-03", "day": "D10", "time": "07:30", "name": "Phở Gia Truyền Bát Đàn", "desc": "49 Bát Đàn. Open 06:00. Best phở bò in Hanoi — final bowl of the trip.", "cat": "Food", "vnd": "60,000", "usd": "2.5", "tip": "Open early. No queue at 06:30.", "city": "Hanoi", "group": "Breakfast", "option": 2, "q": "Phở Gia Truyền Bát Đàn, Hanoi"}, {"id": "d10-04", "day": "D10", "time": "09:00", "name": "Café Giang — Egg Coffee", "desc": "39 Nguyễn Hữu Huân. Last egg coffee of the trip. Sit upstairs terrace.", "cat": "Food", "vnd": "35,000", "usd": "1.5", "tip": "Also try egg hot chocolate", "city": "Hanoi", "q": "Café Giang — Egg Coffee, Hanoi"}, {"id": "d10-05", "day": "D10", "time": "10:00", "name": "Final shopping: Hang Gai / Old Quarter", "desc": "Silk, coffee beans, lacquerware, propaganda posters, o mai. Last chance.", "cat": "Shopping", "vnd": "Varies", "usd": "Varies", "tip": "Shops open 09:00", "city": "Hanoi", "q": "Final shopping: Hang Gai / Old Quarter, Hanoi"}, {"id": "d10-06", "day": "D10", "time": "10:00", "name": "Silk scarves / áo dài", "desc": "Hàng Gai 'Silk Street'. Good quality from $15-30. Bargain a little.", "cat": "Shopping", "vnd": "350,000–1,200,000", "usd": "15–50", "tip": "", "city": "Hanoi", "q": "Silk scarves / áo dài, Hanoi"}, {"id": "d10-07", "day": "D10", "time": "10:00", "name": "Vietnamese coffee + phin", "desc": "Trung Nguyen beans. Phin filter ~30,000 VND. Best souvenir.", "cat": "Shopping", "vnd": "80,000–150,000", "usd": "3–6", "tip": "Buy 2 phin filters — one for gifting", "city": "Hanoi", "q": "Vietnamese coffee + phin, Hanoi"}, {"id": "d10-08", "day": "D10", "time": "10:00", "name": "Lacquerware", "desc": "Hanoia boutique on Nhà Thờ St. Quality pieces, not tourist tat.", "cat": "Shopping", "vnd": "200,000–500,000", "usd": "8–20", "tip": "", "city": "Hanoi", "q": "Lacquerware, Hanoi"}, {"id": "d10-09", "day": "D10", "time": "10:00", "name": "Propaganda posters", "desc": "16 Hàng Bạc. Originals + reproductions. Striking Vietnamese graphic design.", "cat": "Shopping", "vnd": "100,000–300,000", "usd": "4–12", "tip": "", "city": "Hanoi", "q": "Propaganda posters, Hanoi"}, {"id": "d10-10", "day": "D10", "time": "10:00", "name": "Ô mai (salted plum candy)", "desc": "Hàng Đường Street. Traditional Hanoi snack. Gift-worthy packs.", "cat": "Shopping", "vnd": "50,000–100,000", "usd": "2–4", "tip": "", "city": "Hanoi", "q": "Ô mai (salted plum candy), Hanoi"}, {"id": "d10-11", "day": "D10", "time": "11:30", "name": "Bánh Mì 25", "desc": "25 Hàng Cá. Hanoi's most-loved bánh mì. Queue is worth it.", "cat": "Food", "vnd": "45,000", "usd": "2", "tip": "Do not skip this", "city": "Hanoi", "q": "Bánh Mì 25, Hanoi"}, {"id": "d10-12", "day": "D10", "time": "12:30", "name": "Café Pho Co — Hidden Courtyard", "desc": "11 Hàng Gai. Hidden courtyard, 5th floor terrace with Hoan Kiem lake view.", "cat": "Food", "vnd": "40,000–55,000", "usd": "2", "tip": "Secret entrance — ask anyone on Hang Gai", "city": "Hanoi", "q": "Café Pho Co — Hidden Courtyard, Hanoi"}, {"id": "d10-13", "day": "D10", "time": "14:30", "name": "Water Puppet Show", "desc": "Thăng Long Theatre, 57 Đinh Tiên Hoàng. 50-min show. Book in advance.", "cat": "Experience", "vnd": "100,000", "usd": "4", "tip": "Classic Vietnamese folk art", "city": "Hanoi", "q": "Water Puppet Show, Hanoi"}, {"id": "d10-14", "day": "D10", "time": "16:30", "name": "West Lake + Tran Quoc Pagoda", "desc": "Hồ Tây. Vietnam's oldest pagoda. Golden late afternoon light on the water.", "cat": "Experience", "vnd": "Free", "usd": "Free", "tip": "Grab taxi — 15 min from Old Quarter", "city": "Hanoi", "q": "West Lake + Tran Quoc Pagoda, Hanoi"}, {"id": "d10-15", "day": "D10", "time": "18:30", "name": "Weekend Night Market (if Fri/Sat/Sun)", "desc": "Hàng Đào St, 19:00–23:00. 500+ vendors. Clothes, crafts, street food.", "cat": "Shopping", "vnd": "Free", "usd": "Free", "tip": "Closes traffic to the whole street", "city": "Hanoi", "q": "Weekend Night Market (if Fri/Sat/Sun), Hanoi"}, {"id": "d10-16", "day": "D10", "time": "19:30", "name": "Bún Chả Hương Liên", "desc": "8 Chân Cầm. Final send-off meal. The classic.", "cat": "Food", "vnd": "80,000", "usd": "3", "tip": "", "city": "Hanoi", "group": "Dinner", "option": 1, "q": "Bún Chả Hương Liên, Hanoi"}, {"id": "d10-17", "day": "D10", "time": "19:30", "name": "Cơm Tấm Cali", "desc": "Multiple Old Quarter locations. Broken rice + grilled pork + egg. Solid, filling.", "cat": "Food", "vnd": "70,000", "usd": "3", "tip": "Good comfort food send-off", "city": "Hanoi", "group": "Dinner", "option": 2, "q": "Cơm Tấm Cali, Hanoi"}, {"id": "d10-18", "day": "D10", "time": "19:30", "name": "La Badiane (splurge)", "desc": "10 Nam Ngư. French-Vietnamese fusion. If you want one nice dinner the whole trip.", "cat": "Food", "vnd": "500,000–800,000", "usd": "20–32", "tip": "Book ahead. Treat yourself.", "city": "Hanoi", "group": "Dinner", "option": 3, "q": "La Badiane (splurge), Hanoi"}, {"id": "d10-19", "day": "D10", "time": "21:00", "name": "Cong Caphe — Coconut Coffee", "desc": "54 Triệu Việt Vương (or Old Quarter branch). Retro communist decor. Coconut iced coffee.", "cat": "Food", "vnd": "45,000", "usd": "2", "tip": "Great final nightcap", "city": "Hanoi", "q": "Cong Caphe — Coconut Coffee, Hanoi"}, {"id": "d11-01", "day": "D11", "time": "09:00", "name": "Lazy morning", "desc": "Sleep in. Pack. Final bag check. Weigh luggage — Vietnamese airlines are strict.", "cat": "Logistics", "vnd": "", "usd": "", "tip": "", "city": "Hanoi"}, {"id": "d11-02", "day": "D11", "time": "10:00", "name": "Last breakfast: any Old Quarter spot", "desc": "Bánh cuốn, cháo, xôi — whatever you haven't tried yet.", "cat": "Food", "vnd": "40,000–60,000", "usd": "2", "tip": "", "city": "Hanoi"}, {"id": "d11-03", "day": "D11", "time": "11:00", "name": "Pharmacy run (nha thuốc)", "desc": "Oresol rehydration sachets, tiger balm, any last meds. No prescription needed.", "cat": "Logistics", "vnd": "30,000–100,000", "usd": "1–4", "tip": "Cheap and convenient", "city": "Hanoi"}, {"id": "d11-04", "day": "D11", "time": "12:00", "name": "Spend remaining VND", "desc": "Coffee beans, snacks, food near hotel. VND useless outside Vietnam.", "cat": "Shopping", "vnd": "Varies", "usd": "Varies", "tip": "Airport exchange rates terrible", "city": "Hanoi"}, {"id": "d11-05", "day": "D11", "time": "13:00", "name": "Lunch: light pre-flight", "desc": "Bún bò Nam Bộ (67 Hàng Điếu) or bánh mì. Light enough for the flight.", "cat": "Food", "vnd": "60,000", "usd": "2.5", "tip": "", "city": "Hanoi"}, {"id": "d11-06", "day": "D11", "time": "14:00", "name": "Check out + Grab to airport", "desc": "Grab car (not motorbike) for bags. ~300,000 VND. ~60 min drive.", "cat": "Travel", "vnd": "300,000", "usd": "12", "tip": "For 17:30 flight, leave by 14:30–15:00", "city": "Hanoi"}, {"id": "d11-07", "day": "D11", "time": "15:30", "name": "Arrive Noi Bai Airport", "desc": "Check in, drop bags, security. International terminal: allow 90 min before departure.", "cat": "Logistics", "vnd": "", "usd": "", "tip": "", "city": "Hanoi"}, {"id": "d11-08", "day": "D11", "time": "17:30", "name": "FLIGHT DEPARTURE", "desc": "Fly out. Vietnam done.", "cat": "Logistics", "vnd": "", "usd": "", "tip": "", "city": "Hanoi"}]};
+const DAYS = DATA.days;
+const ITEMS = DATA.items;
+const DAY_INDEX = Object.fromEntries(DAYS.map((d, i) => [d.id, i]));
+
+// Defaults for the GitHub sync settings; anything typed in the settings panel overrides these.
+const GH_DEFAULTS = { owner: "", repo: "vietnam-trip", branch: "data", path: "trip-data.json" };
+
+const LS_STORE = "vn-trip-store";
+const LS_SYNCED = "vn-trip-synced";
+const LS_GH = "vn-trip-gh";
+const LS_TAB = "vn-trip-tab";
+const LS_LAST = "vn-trip-last-sync";
+
+// store.items[id] = {done, day, at}; store.extras[id] = {day, name, url, kind, note, done, createdAt, at, deleted?}
+// `at` is the time of the last change, used to merge this phone's changes with GitHub's copy.
+let store = { items: {}, extras: {} };
+let synced = { items: {}, extras: {} };
+let cfg = Object.assign({}, GH_DEFAULTS, { token: "" });
+let current = DAYS[0].id;
+
+function readJSON(key, fallback) { try { const v = JSON.parse(localStorage.getItem(key) || "null"); return v || fallback; } catch (e) { return fallback; } }
+function writeJSON(key, v) { try { localStorage.setItem(key, JSON.stringify(v)); return true; } catch (e) { return false; } }
+function normalise(s) { return { items: (s && s.items) || {}, extras: (s && s.extras) || {} }; }
+
+function loadLocal() {
+  store = normalise(readJSON(LS_STORE, null));
+  synced = normalise(readJSON(LS_SYNCED, null));
+  cfg = Object.assign({}, GH_DEFAULTS, { token: "" }, readJSON(LS_GH, {}));
+}
+function saveLocal() {
+  if (!writeJSON(LS_STORE, store)) setStatus("err", "This browser isn't letting the page save. Turn off Private Browsing in Safari.");
+}
+
+function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+function mapsSearch(q) { return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q); }
+function safeUrl(u) { try { const x = new URL(u.trim()); return (x.protocol === "https:" || x.protocol === "http:") ? x.href : null; } catch (e) { return null; } }
+function dayNum(id) { return id.replace("D", ""); }
+function dayLabel(d) { return "Day " + dayNum(d.id) + " · " + d.date + " · " + d.cities.join(" → "); }
+function costText(vnd, usd) {
+  if (!vnd) return "";
+  if (vnd === "Free" || vnd === "Included" || vnd === "Varies") return vnd;
+  return usd ? vnd + " ₫ ($" + usd + ")" : vnd + " ₫";
+}
+// Sort key for times like "07:30", "14:00–18:00", "Evening" and blank (any time).
+function timeKey(t) {
+  const m = (t || "").match(/^(\d{1,2}):(\d{2})/);
+  if (m) return +m[1] * 60 + +m[2];
+  if (/evening/i.test(t)) return 18 * 60 + 1;
+  return 24 * 60 + 1;
+}
+
+const isDone = it => !!(store.items[it.id] && store.items[it.id].done);
+const effDay = it => (store.items[it.id] && store.items[it.id].day) || it.day;
+const itemsFor = day => ITEMS.filter(it => effDay(it) === day);
+const extrasFor = day => Object.entries(store.extras)
+  .filter(([, x]) => !x.deleted && x.day === day)
+  .map(([id, x]) => Object.assign({ id }, x))
+  .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+function checkbox(id, label, checked, onChange) {
+  const cb = document.createElement("input");
+  cb.type = "checkbox"; cb.id = "cb-" + id; cb.checked = !!checked;
+  cb.setAttribute("aria-label", label);
+  cb.addEventListener("change", () => onChange(cb.checked));
+  return cb;
+}
+
+function moveSelect(id, day, onMove) {
+  const wrap = el("label", "move");
+  const sel = document.createElement("select");
+  sel.id = "mv-" + id;
+  sel.setAttribute("aria-label", "Move to another day");
+  const ph = new Option("Move to…", ""); ph.disabled = true; ph.selected = true; sel.add(ph);
+  DAYS.forEach(d => { if (d.id !== day) sel.add(new Option(dayLabel(d), d.id)); });
+  sel.addEventListener("change", () => { if (sel.value) onMove(sel.value); });
+  wrap.append(sel);
+  return wrap;
+}
+
+function renderItem(it) {
+  const done = isDone(it);
+  const wrap = el("div", "item" + (done ? " done" : ""));
+  wrap.append(checkbox(it.id, it.name, done, v => setItem(it, { done: v })));
+  const body = el("div", "body");
+  const name = el("label", "name", it.name); name.htmlFor = "cb-" + it.id;
+  body.append(name);
+  if (it.desc) body.append(el("div", "desc", it.desc));
+  if (it.tip) body.append(el("div", "tip", it.tip));
+  const row = el("div", "row");
+  if (effDay(it) !== it.day) row.append(el("span", "flag", "Moved from Day " + dayNum(it.day)));
+  row.append(el("span", "tag", it.cat));
+  const c = costText(it.vnd, it.usd); if (c) row.append(el("span", "cost", c));
+  if (it.q) { const a = el("a", "", "Find on Maps ↗"); a.href = mapsSearch(it.q); a.target = "_blank"; a.rel = "noopener"; row.append(a); }
+  row.append(moveSelect(it.id, effDay(it), to => moveItem(it, to)));
+  body.append(row);
+  wrap.append(body);
+  return wrap;
+}
+
+function renderList() {
+  const list = document.getElementById("list");
+  list.replaceChildren();
+  const its = itemsFor(current).slice().sort((a, b) =>
+    timeKey(a.time) - timeKey(b.time) || DAY_INDEX[a.day] - DAY_INDEX[b.day] || a.id.localeCompare(b.id));
+  if (!its.length) { list.append(el("div", "empty", "No planned items on this day. Move one here, or add a place below.")); return; }
+  const slots = [];
+  its.forEach(it => {
+    const last = slots[slots.length - 1];
+    if (last && last.time === it.time) last.items.push(it); else slots.push({ time: it.time, items: [it] });
+  });
+  slots.forEach(s => {
+    const slot = el("div", "slot");
+    slot.append(el("div", "time", s.time || "Any time"));
+    const items = el("div", "items");
+    const groups = {};
+    s.items.forEach(it => { if (it.group) groups[it.group] = (groups[it.group] || 0) + 1; });
+    const seen = {};
+    s.items.forEach(it => {
+      if (it.group && groups[it.group] > 1) {
+        items.append(el("div", "or", seen[it.group] ? "or" : it.group + " · pick one"));
+        seen[it.group] = true;
+      }
+      items.append(renderItem(it));
+    });
+    slot.append(items);
+    list.append(slot);
+  });
+}
+
+const armed = new Set();
+function renderExtras() {
+  const box = document.getElementById("extras");
+  box.replaceChildren();
+  const d = DAYS[DAY_INDEX[current]];
+  const mine = extrasFor(current);
+  if (!mine.length) { box.append(el("div", "empty", "Nothing added for this day yet. Use the form below to add a place you find.")); return; }
+  mine.forEach(x => {
+    const wrap = el("div", "item" + (x.done ? " done" : ""));
+    wrap.append(checkbox(x.id, x.name, x.done, v => setExtra(x.id, { done: v })));
+    const body = el("div", "body");
+    const name = el("label", "name", x.name); name.htmlFor = "cb-" + x.id;
+    body.append(name);
+    if (x.note) body.append(el("div", "desc", x.note));
+    const row = el("div", "row");
+    row.append(el("span", "flag", "Added"));
+    if (x.kind) row.append(el("span", "tag", x.kind));
+    const href = x.url && safeUrl(x.url);
+    const a = el("a", "", href ? "Open in Maps ↗" : "Find on Maps ↗");
+    a.href = href || mapsSearch(x.name + ", " + d.cities[d.cities.length - 1]);
+    a.target = "_blank"; a.rel = "noopener"; row.append(a);
+    row.append(moveSelect(x.id, x.day, to => moveExtra(x, to)));
+    const rm = el("button", "remove" + (armed.has(x.id) ? " armed" : ""), armed.has(x.id) ? "Tap again to remove" : "Remove");
+    rm.type = "button";
+    rm.addEventListener("click", () => {
+      if (armed.has(x.id)) { armed.delete(x.id); removeExtra(x); }
+      else { armed.add(x.id); renderExtras(); setTimeout(() => { if (armed.delete(x.id)) renderExtras(); }, 4000); }
+    });
+    row.append(rm);
+    body.append(row);
+    wrap.append(body);
+    box.append(wrap);
+  });
+}
+
+function dayCounts(day) {
+  const its = itemsFor(day), xs = extrasFor(day);
+  return { done: its.filter(isDone).length + xs.filter(x => x.done).length, total: its.length + xs.length };
+}
+
+function renderTabs() {
+  const nav = document.getElementById("tabs");
+  nav.replaceChildren();
+  DAYS.forEach(d => {
+    const { done, total } = dayCounts(d.id);
+    const b = el("button", "tab" + (total && done === total ? " complete" : ""));
+    b.type = "button"; b.id = "tab-" + d.id; b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", d.id === current ? "true" : "false");
+    b.append(el("span", "d", "D" + dayNum(d.id) + " · " + d.date), el("span", "c", d.cities.join(" → ")), el("span", "n", done + "/" + total));
+    b.addEventListener("click", () => selectDay(d.id, true));
+    nav.append(b);
+  });
+}
+
+function renderHeader() {
+  const d = DAYS[DAY_INDEX[current]];
+  document.getElementById("eyebrow").textContent = "Vietnam · Day " + dayNum(d.id) + " of " + DAYS.length;
+  const h = document.getElementById("title");
+  h.replaceChildren(document.createTextNode(d.weekday + ", " + d.date + " · "), el("span", "city", d.cities.join(" → ")));
+  const meta = document.getElementById("meta");
+  meta.replaceChildren();
+  const its = itemsFor(current);
+  const first = its.map(i => i.time).filter(t => /^\d/.test(t)).sort((a, b) => timeKey(a) - timeKey(b))[0];
+  if (first) meta.append(el("span", "", "Starts " + first.slice(0, 5)));
+  meta.append(el("span", "", its.length + " planned"));
+  // Counts one choice per "pick one" group (the first listed) so the estimate is a real day.
+  let vnd = 0;
+  const picked = {};
+  its.forEach(it => {
+    if (it.group) { const k = it.time + it.group + it.day; if (picked[k]) return; picked[k] = true; }
+    const m = (it.vnd || "").replace(/,/g, "").match(/\d+/g);
+    if (m) vnd += Math.max(...m.map(Number));
+  });
+  const s = el("span", "", "Est. spend "); s.append(el("b", "", "~" + vnd.toLocaleString("en-US") + " ₫"));
+  meta.append(s);
+  const { done, total } = dayCounts(current);
+  document.getElementById("count").textContent = done + " / " + total;
+  document.getElementById("bar").style.width = (total ? (done / total) * 100 : 0) + "%";
+  document.getElementById("addBtn").textContent = "Add to Day " + dayNum(d.id);
+}
+
+function renderAll() { renderTabs(); renderHeader(); renderList(); renderExtras(); renderStatus(); }
+
+function selectDay(id, user) {
+  current = id;
+  try { localStorage.setItem(LS_TAB, id); } catch (e) {}
+  try { history.replaceState(null, "", "#" + id.toLowerCase()); } catch (e) {}
+  renderAll();
+  const t = document.getElementById("tab-" + id);
+  if (t) t.scrollIntoView({ block: "nearest", inline: "center", behavior: user ? "smooth" : "auto" });
+  if (user) window.scrollTo({ top: 0 });
+}
+
+let toastTimer = null;
+function toast(text, undo) {
+  const t = document.getElementById("toast");
+  t.replaceChildren(el("span", "", text));
+  if (undo) { const b = el("button", "", "Undo"); b.type = "button"; b.addEventListener("click", () => { t.hidden = true; undo(); }); t.append(b); }
+  t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 5000);
+}
+
+/* ---------- Changes ---------- */
+
+function commit() { saveLocal(); renderAll(); scheduleSync(); }
+
+function setItem(it, patch) {
+  store.items[it.id] = Object.assign({ done: false, day: it.day }, store.items[it.id], patch, { at: Date.now() });
+  commit();
+}
+function moveItem(it, to) {
+  const from = effDay(it);
+  setItem(it, { day: to });
+  toast("Moved " + it.name + " to Day " + dayNum(to) + ".", () => setItem(it, { day: from }));
+}
+function setExtra(id, patch) {
+  store.extras[id] = Object.assign({}, store.extras[id], patch, { at: Date.now() });
+  commit();
+}
+function moveExtra(x, to) {
+  const from = x.day;
+  setExtra(x.id, { day: to });
+  toast("Moved " + x.name + " to Day " + dayNum(to) + ".", () => setExtra(x.id, { day: from }));
+}
+// Removed places are kept as a marker so the removal also reaches other phones.
+function removeExtra(x) {
+  setExtra(x.id, { deleted: true });
+  toast("Removed " + x.name + ".", () => setExtra(x.id, { deleted: false }));
+}
+
+/* ---------- GitHub sync ---------- */
+
+// JSON with sorted keys, so two copies of the same data always compare equal.
+function stable(v) {
+  if (Array.isArray(v)) return "[" + v.map(stable).join(",") + "]";
+  if (v && typeof v === "object") return "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + stable(v[k])).join(",") + "}";
+  return JSON.stringify(v === undefined ? null : v);
+}
+// Per item, the most recent change wins; `b` wins ties.
+function merge(a, b) {
+  a = normalise(a); b = normalise(b);
+  const out = { items: {}, extras: {} };
+  for (const sec of ["items", "extras"]) {
+    const keys = new Set([...Object.keys(a[sec]), ...Object.keys(b[sec])]);
+    keys.forEach(k => {
+      const x = a[sec][k], y = b[sec][k];
+      out[sec][k] = !x ? y : !y ? x : ((x.at || 0) > (y.at || 0) ? x : y);
+    });
+  }
+  return out;
+}
+function pendingCount() {
+  let n = 0;
+  for (const sec of ["items", "extras"]) {
+    const keys = new Set([...Object.keys(store[sec]), ...Object.keys(synced[sec])]);
+    keys.forEach(k => { if (stable(store[sec][k]) !== stable(synced[sec][k])) n++; });
+  }
+  return n;
+}
+
+function toB64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+function fromB64(b64) {
+  const bin = atob(b64.replace(/\s/g, ""));
+  return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0)));
+}
+
+class SyncError extends Error { constructor(kind, msg) { super(msg); this.kind = kind; } }
+
+async function gh(path, opts = {}) {
+  let res;
+  try {
+    res = await fetch("https://api.github.com" + path, Object.assign({ cache: "no-store" }, opts, {
+      headers: Object.assign({ Accept: "application/vnd.github+json", Authorization: "Bearer " + cfg.token, "X-GitHub-Api-Version": "2022-11-28" }, opts.headers || {})
+    }));
+  } catch (e) { throw new SyncError("network", "Couldn't reach GitHub."); }
+  if (res.status === 401) throw new SyncError("auth", "GitHub didn't accept the token.");
+  if (res.status === 403) {
+    const body = await res.json().catch(() => ({}));
+    if (/rate limit/i.test(body.message || "")) throw new SyncError("network", "GitHub is limiting requests. Trying again shortly.");
+    throw new SyncError("auth", "The token can't write to this repository. Give it Contents: Read and write.");
+  }
+  return res;
+}
+const repoPath = () => "/repos/" + encodeURIComponent(cfg.owner) + "/" + encodeURIComponent(cfg.repo);
+const filePath = () => repoPath() + "/contents/" + cfg.path.split("/").map(encodeURIComponent).join("/");
+
+async function readRemote() {
+  const res = await gh(filePath() + "?ref=" + encodeURIComponent(cfg.branch));
+  if (res.status === 404) return { data: null, sha: null };
+  if (!res.ok) throw new SyncError("network", "GitHub returned an error (" + res.status + ").");
+  const body = await res.json();
+  let data = null;
+  try { data = JSON.parse(fromB64(body.content || "")); } catch (e) { data = null; }
+  return { data: normalise(data), sha: body.sha };
+}
+
+// The data lives on its own branch so each change doesn't rebuild the GitHub Pages site.
+async function ensureBranch() {
+  const b = await gh(repoPath() + "/branches/" + encodeURIComponent(cfg.branch));
+  if (b.ok) return;
+  if (b.status !== 404) throw new SyncError("network", "GitHub returned an error (" + b.status + ").");
+  const repo = await gh(repoPath());
+  if (repo.status === 404) throw new SyncError("auth", "Couldn't find " + cfg.owner + "/" + cfg.repo + ". Check the username and repository, and that the token can reach it.");
+  const def = (await repo.json()).default_branch;
+  const ref = await gh(repoPath() + "/git/ref/heads/" + encodeURIComponent(def));
+  if (!ref.ok) throw new SyncError("network", "Couldn't read the " + def + " branch. Make sure the repository has at least one file.");
+  const sha = (await ref.json()).object.sha;
+  const made = await gh(repoPath() + "/git/refs", { method: "POST", body: JSON.stringify({ ref: "refs/heads/" + cfg.branch, sha }) });
+  if (!made.ok && made.status !== 422) throw new SyncError("network", "Couldn't create the " + cfg.branch + " branch (" + made.status + ").");
+}
+
+async function writeRemote(data, sha) {
+  const body = { message: "Update trip checklist", content: toB64(JSON.stringify(data, null, 1) + "\n"), branch: cfg.branch };
+  if (sha) body.sha = sha;
+  const res = await gh(filePath(), { method: "PUT", body: JSON.stringify(body) });
+  if (res.status === 409 || res.status === 422) return false;
+  if (res.status === 404) throw new SyncError("auth", "Couldn't write to " + cfg.owner + "/" + cfg.repo + ". Check the repository name and the token's access.");
+  if (!res.ok) throw new SyncError("network", "GitHub returned an error (" + res.status + ").");
+  return true;
+}
+
+const connected = () => !!(cfg.token && cfg.owner && cfg.repo && cfg.branch && cfg.path);
+let syncing = false, again = false, syncTimer = null, lastError = null;
+
+function scheduleSync(ms = 1500) {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(sync, ms);
+}
+
+async function sync() {
+  clearTimeout(syncTimer);
+  if (!connected() || !navigator.onLine) { renderStatus(); return; }
+  if (syncing) { again = true; return; }
+  syncing = true; lastError = null; renderStatus();
+  try {
+    let done = false;
+    for (let attempt = 0; attempt < 3 && !done; attempt++) {
+      const remote = await readRemote();
+      if (!remote.sha) await ensureBranch();
+      const base = remote.data || { items: {}, extras: {} };
+      const merged = merge(base, store);
+      if (stable(merged) !== stable(base)) done = await writeRemote(merged, remote.sha);
+      else done = true;
+      if (done) {
+        // Keep anything changed on this phone while the request was in flight.
+        store = merge(merged, store);
+        synced = merged;
+        saveLocal(); writeJSON(LS_SYNCED, synced);
+        try { localStorage.setItem(LS_LAST, String(Date.now())); } catch (e) {}
+      }
+    }
+    if (!done) throw new SyncError("network", "Someone else was saving at the same time. Trying again shortly.");
+  } catch (e) {
+    lastError = e instanceof SyncError ? e : new SyncError("network", "Sync failed.");
+  } finally {
+    syncing = false;
+    renderAll();
+    if (again) { again = false; scheduleSync(300); }
+    else if (lastError && lastError.kind === "network") scheduleSync(30000);
+    else if (pendingCount()) scheduleSync();
+  }
+}
+
+function ago(ms) {
+  const s = Math.round((Date.now() - ms) / 1000);
+  if (s < 45) return "just now";
+  const m = Math.round(s / 60);
+  if (m < 60) return m + " min ago";
+  const h = Math.round(m / 60);
+  if (h < 24) return h + " hr ago";
+  return Math.round(h / 24) + " days ago";
+}
+
+function setStatus(kind, text, showButton) {
+  const box = document.getElementById("sync");
+  box.className = "sync " + kind;
+  document.getElementById("syncText").textContent = text;
+  const b = document.getElementById("syncNow");
+  b.hidden = !showButton;
+  b.textContent = connected() ? "Sync now" : "Connect GitHub";
+}
+
+function renderStatus() {
+  const n = pendingCount();
+  const changes = n === 1 ? "1 change" : n + " changes";
+  if (!connected()) { setStatus("", "Saved on this phone. GitHub sync is off.", true); return; }
+  if (syncing) { setStatus("wait", "Syncing with GitHub…", false); return; }
+  if (!navigator.onLine) { setStatus("wait", n ? changes + " saved on this phone. They'll sync when you're back online." : "Offline. Changes save on this phone and sync later.", false); return; }
+  if (lastError) { setStatus("err", lastError.message + (n ? " " + changes + " saved on this phone." : ""), true); return; }
+  if (n) { setStatus("wait", changes + " waiting to sync.", true); return; }
+  let last = 0; try { last = +localStorage.getItem(LS_LAST) || 0; } catch (e) {}
+  setStatus("ok", last ? "Synced with GitHub " + ago(last) + "." : "Connected to GitHub.", true);
+}
+
+document.getElementById("syncNow").addEventListener("click", () => {
+  if (connected()) sync();
+  else { const s = document.getElementById("settings"); s.open = true; s.scrollIntoView({ behavior: "smooth" }); }
+});
+window.addEventListener("online", () => sync());
+window.addEventListener("offline", renderStatus);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") sync(); });
+// Pull other people's changes every minute while the page is open.
+setInterval(() => { if (document.visibilityState === "visible" && !pendingCount()) sync(); else renderStatus(); }, 60000);
+
+/* ---------- GitHub settings ---------- */
+
+const ghFields = ["owner", "repo", "branch", "path"];
+function fillSettings() {
+  ghFields.forEach(f => { document.getElementById("gh" + f[0].toUpperCase() + f.slice(1)).value = cfg[f] || ""; });
+  const t = document.getElementById("ghToken");
+  t.value = "";
+  t.placeholder = cfg.token ? "Saved. Leave blank to keep it." : "github_pat_…";
+}
+document.getElementById("ghForm").addEventListener("submit", ev => {
+  ev.preventDefault();
+  const next = Object.assign({}, cfg);
+  ghFields.forEach(f => { next[f] = document.getElementById("gh" + f[0].toUpperCase() + f.slice(1)).value.trim() || GH_DEFAULTS[f]; });
+  const t = document.getElementById("ghToken").value.trim();
+  if (t) next.token = t;
+  const msg = document.getElementById("ghMsg");
+  msg.className = "msg";
+  if (!next.owner) { msg.className = "msg err"; msg.textContent = "Add your GitHub username."; return; }
+  if (!next.token) { msg.className = "msg err"; msg.textContent = "Paste an access token."; return; }
+  cfg = next; writeJSON(LS_GH, cfg); fillSettings();
+  msg.textContent = "Saved. Syncing…";
+  sync().then(() => { msg.textContent = lastError ? "" : "Connected."; });
+});
+document.getElementById("ghDisconnect").addEventListener("click", () => {
+  cfg.token = ""; writeJSON(LS_GH, cfg); fillSettings(); lastError = null;
+  document.getElementById("ghMsg").textContent = "Disconnected. Changes keep saving on this phone.";
+  renderStatus();
+});
+
+/* ---------- Add a place ---------- */
+
+const form = document.getElementById("addForm");
+const nameIn = document.getElementById("addName");
+const urlIn = document.getElementById("addUrl");
+const msg = document.getElementById("addMsg");
+
+// Pasting a Maps link into the name box moves it to the link box.
+nameIn.addEventListener("paste", ev => {
+  const t = (ev.clipboardData && ev.clipboardData.getData("text")) || "";
+  if (safeUrl(t) && !urlIn.value) { ev.preventDefault(); urlIn.value = t.trim(); msg.className = "msg"; msg.textContent = "Link moved to the Maps box. Now type the name."; }
+});
+
+form.addEventListener("submit", ev => {
+  ev.preventDefault();
+  const name = nameIn.value.trim();
+  const rawUrl = urlIn.value.trim();
+  msg.className = "msg";
+  if (!name) { msg.className = "msg err"; msg.textContent = "Add a name for the place."; nameIn.focus(); return; }
+  let url = "";
+  if (rawUrl) { url = safeUrl(rawUrl); if (!url) { msg.className = "msg err"; msg.textContent = "That link doesn't look right. Paste the full link starting with https://"; urlIn.focus(); return; } }
+  const id = "x" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  setExtra(id, {
+    day: current, name, url, kind: document.getElementById("addKind").value,
+    note: document.getElementById("addNote").value.trim(), done: false, createdAt: Date.now()
+  });
+  form.reset(); nameIn.focus();
+  msg.textContent = "Added " + name + " to Day " + dayNum(current) + ".";
+});
+
+/* ---------- Start ---------- */
+
+// Opening day: the #d3-style link if given, else today's trip day, else the last tab used, else Day 1.
+function initialDay() {
+  const h = (location.hash || "").slice(1).toUpperCase();
+  if (h in DAY_INDEX) return h;
+  const now = new Date();
+  const iso = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+  const today = DAYS.find(d => d.iso === iso);
+  if (today) return today.id;
+  try { const s = localStorage.getItem(LS_TAB); if (s in DAY_INDEX) return s; } catch (e) {}
+  return DAYS[0].id;
+}
+
+loadLocal();
+fillSettings();
+selectDay(initialDay(), false);
+sync();
+
+// Keeps the page working with no signal once it has been opened online.
+if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+</script>
+</body>
+</html>
