@@ -9,6 +9,12 @@
    "done": false,
    "day": "D2",
    "at": 1793620074332
+  },
+  "d10-01": {
+   "done": false,
+   "day": "D10",
+   "deleted": true,
+   "at": 1794166898745
   }
  },
  "extras": {},
