@@ -29,9 +29,9 @@
    "url": "https://maps.app.goo.gl/8HGP8YAkAee8sXkD7?g_st=ic",
    "kind": "Food",
    "note": "Had Pho, Noodle + chicken, springrolls and beer",
-   "done": false,
+   "done": true,
    "createdAt": 1794210433159,
-   "at": 1794210433159
+   "at": 1794210439855
   }
  },
  "notes": {}
