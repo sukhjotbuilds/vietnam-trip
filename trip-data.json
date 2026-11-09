@@ -22,6 +22,17 @@
    "at": 1794166956702
   }
  },
- "extras": {},
+ "extras": {
+  "xmw8ykeiv4ffu": {
+   "day": "D10",
+   "name": "Corner Food - Vietnamese Local Food",
+   "url": "https://maps.app.goo.gl/8HGP8YAkAee8sXkD7?g_st=ic",
+   "kind": "Food",
+   "note": "Had Pho, Noodle + chicken, springrolls and beer",
+   "done": false,
+   "createdAt": 1794210433159,
+   "at": 1794210433159
+  }
+ },
  "notes": {}
 }
